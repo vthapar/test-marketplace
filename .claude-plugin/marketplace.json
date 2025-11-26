@@ -1,0 +1,19 @@
+{
+  "name": "test-marketplace",
+  "version": "1.0.0",
+  "description": "A test marketplace for Claude Code plugins",
+  "owner": {
+  "name": "submariner"
+  },
+  "plugins": [
+    {
+      "name": "submariner",
+      "version": "0.1.0",
+      "description": "Submariner cli helpers",
+      "author": {
+        "name": "Submariner Team"
+      },
+      "source": "./submariner-plugin"
+    }
+  ]
+}

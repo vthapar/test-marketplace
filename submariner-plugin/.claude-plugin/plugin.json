@@ -1,0 +1,8 @@
+{
+  "name": "submariner",
+  "version": "0.1.0",
+  "description": "Submariner cli heplers",
+  "author": {
+    "name": "Submariner Team"
+  }
+}
