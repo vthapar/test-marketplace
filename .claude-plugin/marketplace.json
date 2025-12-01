@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A test marketplace for Claude Code plugins",
   "owner": {
-  "name": "submariner"
+    "name": "submariner"
   },
   "plugins": [
     {
@@ -13,7 +13,8 @@
       "author": {
         "name": "Submariner Team"
       },
-      "source": "./submariner-plugin"
+      "source": "./../submariner-plugin"
     }
   ]
 }
+
