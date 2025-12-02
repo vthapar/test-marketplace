@@ -17,6 +17,7 @@ test-marketplace/
     └── commands/                      # Plugin slash commands
         ├── deploy-broker.md           # Deploy Submariner broker
         ├── deploy.md                  # Join cluster to broker
+        ├── diagnose.md                # Run comprehensive diagnostics
         ├── status.md                  # Show Submariner status
         └── uninstall.md               # Uninstall Submariner
 ```
@@ -79,6 +80,7 @@ In Claude Code, you can also check available commands:
 This should show autocomplete suggestions for all Submariner commands:
 - `/submariner:deploy-broker`
 - `/submariner:deploy`
+- `/submariner:diagnose`
 - `/submariner:status`
 - `/submariner:uninstall`
 
