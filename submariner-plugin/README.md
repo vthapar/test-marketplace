@@ -47,12 +47,12 @@ Join a cluster to an existing Submariner broker using `subctl join`. Use this af
 /deploy
 ```
 
-### `/status`
+### `/show-status`
 Display comprehensive status of Submariner components and connections including gateway nodes, cable connections, and service discovery.
 
 **Usage:**
 ```
-/status
+/show-status
 ```
 
 ### `/diagnose`
@@ -79,6 +79,75 @@ Safely remove Submariner components from the cluster.
 /uninstall
 ```
 
+### `/troubleshoot-health`
+**[ENTRY POINT]** Comprehensive health check that assesses Submariner deployment and recommends the next troubleshooting step. This is where you should start when diagnosing issues.
+
+**Usage:**
+```
+/troubleshoot-health <kubeconfig>
+```
+
+**What it checks:**
+- Pod status
+- Tunnel connectivity
+- Gateway logs
+- ESP/Firewall detection
+- Submariner diagnostics
+
+### `/troubleshoot-tunnel`
+Troubleshoot why inter-cluster tunnels are not in 'connected' status. Analyzes gateway logs, cable drivers, and IP selection to identify root cause.
+
+**Usage:**
+```
+/troubleshoot-tunnel <kubeconfig1> <kubeconfig2>
+```
+
+**Diagnoses:**
+- ESP firewall blocking
+- UDP port blocking
+- IPSec authentication issues
+- Network connectivity problems
+
+### `/troubleshoot-esp-check`
+Test and fix ESP protocol (IP 50) firewall blocking by applying UDP encapsulation. Supports both ACM and subctl deployments.
+
+**Usage:**
+```
+/troubleshoot-esp-check <kubeconfig1> <kubeconfig2>
+```
+
+**What it does:**
+- Applies forceUDPEncaps configuration
+- Restarts gateway pods
+- Verifies tunnel connectivity
+- Confirms if ESP blocking was the issue
+
+### `/troubleshoot-datapath-check`
+Verify end-to-end datapath connectivity between clusters including pod-to-pod and service connectivity.
+
+**Usage:**
+```
+/troubleshoot-datapath-check <kubeconfig1> <kubeconfig2>
+```
+
+**What it tests:**
+- Pod-to-pod connectivity
+- Service connectivity
+- DNS resolution
+
+### `/troubleshoot-mtu-check`
+Diagnose MTU/fragmentation issues by testing connectivity with different packet sizes.
+
+**Usage:**
+```
+/troubleshoot-mtu-check <kubeconfig1> <kubeconfig2>
+```
+
+**What it does:**
+- Tests with default packet size (~3000 bytes)
+- Tests with small packet size (300 bytes)
+- Recommends TCP MSS clamping if MTU issue detected
+
 ## Example Workflow
 
 1. Deploy the broker to your central cluster:
@@ -94,7 +163,7 @@ Safely remove Submariner components from the cluster.
 
 3. Verify the deployment:
    ```
-   /status
+   /show-status
    ```
 
 4. Test connectivity:
