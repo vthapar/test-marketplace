@@ -85,6 +85,29 @@ Check the "REMOTE IP" column in `subctl show connections` output:
 - Are there any failed checks?
 - Any warnings about configuration?
 
+**F. RouteAgent Status (Node-to-Gateway Connectivity):**
+Check RouteAgent custom resources to verify node-to-gateway connectivity:
+
+```bash
+kubectl get routeagents.submariner.io -n submariner-operator --kubeconfig <kubeconfig>
+```
+
+For each RouteAgent, check the status:
+```bash
+kubectl get routeagents.submariner.io -n submariner-operator <routeagent-name> -o jsonpath='{.status.remoteEndpoints[*].status}' --kubeconfig <kubeconfig>
+```
+
+**RouteAgent Status Rules:**
+- **Gateway nodes**: `status: none` is **OK** (gateway nodes don't perform health checks to themselves)
+- **Non-gateway nodes**: `status: connected` is **OK** (node can reach remote gateway)
+- **Non-gateway nodes**: `status != connected` is **NOT OK** (routing issue from that node to remote gateway)
+
+**What to check:**
+- Get all RouteAgents and check their status
+- Gateway nodes showing `status: none` = expected and healthy
+- Non-gateway nodes must show `status: connected` for each remote endpoint
+- If any non-gateway node shows status other than "connected", there's a routing issue on that specific node
+
 ### Phase 4: Provide Status Summary
 
 Create a clear summary:
@@ -97,6 +120,7 @@ Create a clear summary:
 ✓ Logs: [No errors / Errors found in X pods]
 [✓/⚠] ESP/Firewall: [No issues / Potential ESP blocking detected]
 ✓ Diagnostics: [All passed / X checks failed]
+✓ RouteAgent Status: [All nodes connected / X nodes with issues]
 ```
 
 ### Phase 5: Recommend Next Steps (CRITICAL)
@@ -120,7 +144,39 @@ This command will:
 - Guide you through fixes
 ```
 
-**SCENARIO 2: Tunnel Connected but Other Issues**
+**SCENARIO 2: Tunnel Connected but RouteAgent Issues**
+```
+✓ Gateway-to-Gateway tunnel is healthy
+⚠ Some non-gateway nodes cannot reach remote gateway
+
+RouteAgent Issue Detected:
+- Gateway-to-gateway connectivity is healthy (tunnel connected)
+- But one or more non-gateway nodes in THIS CLUSTER show status != "connected"
+
+ROOT CAUSE:
+This is a LOCAL CLUSTER routing issue - non-gateway nodes cannot route to the remote gateway.
+The problem is NOT with the inter-cluster tunnel, but with routing WITHIN this cluster.
+
+RECOMMENDED NEXT STEP:
+Investigate routing on the affected non-gateway nodes in THIS CLUSTER:
+
+1. Identify which nodes have issues:
+   kubectl get routeagents.submariner.io -n submariner-operator --kubeconfig <kubeconfig>
+
+   Look for non-gateway nodes with status != "connected"
+
+2. Check route agent logs on affected nodes:
+   kubectl logs -n submariner-operator -l app=submariner-routeagent --kubeconfig <kubeconfig>
+
+3. Verify routing tables on the affected nodes:
+   - Can the node reach the local gateway node?
+   - Are there CNI/network plugin issues?
+   - Check for firewall rules blocking traffic between nodes
+
+This is a local cluster routing problem, not an inter-cluster connectivity issue.
+```
+
+**SCENARIO 3: Tunnel Connected but Other Issues**
 ```
 ✓ Tunnel is connected, but other issues detected.
 
@@ -131,7 +187,7 @@ RECOMMENDED NEXT STEP:
 - etc.
 ```
 
-**SCENARIO 3: Everything Healthy**
+**SCENARIO 4: Everything Healthy**
 ```
 ✓ ALL CHECKS PASSED
 
@@ -145,7 +201,7 @@ No action needed. You can verify datapath with:
 /submariner:datapath-check <kubeconfig1> <kubeconfig2>
 ```
 
-**SCENARIO 4: ESP Issue Detected (even if tunnel connected)**
+**SCENARIO 5: ESP Issue Detected (even if tunnel connected)**
 ```
 ⚠ ESP FIREWALL ISSUE DETECTED
 
