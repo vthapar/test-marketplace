@@ -148,6 +148,26 @@ Diagnose MTU/fragmentation issues by testing connectivity with different packet 
 - Tests with small packet size (300 bytes)
 - Recommends TCP MSS clamping if MTU issue detected
 
+### `/acm-hub-health`
+Check Submariner health on ACM (Advanced Cluster Management) hub cluster by analyzing ManagedClusterAddOn and SubmarinerConfig resources.
+
+**Usage:**
+```
+/acm-hub-health <hub-kubeconfig>
+```
+
+**What it checks:**
+- ManagedClusterAddOn resources and their status conditions
+- SubmarinerConfig resources and their status conditions
+- Gateway node labeling status
+- Submariner agent and connection degradation
+- Configuration application status
+
+**Provides:**
+- Per-cluster health analysis
+- Specific issue identification with recommended actions
+- Overall ACM hub status summary
+
 ## Example Workflow
 
 1. Deploy the broker to your central cluster:
