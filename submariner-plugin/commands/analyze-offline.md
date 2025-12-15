@@ -23,6 +23,16 @@ Ask the user for (if not provided as parameters):
 - Path to diagnostic data (tarball or directory)
 - Description of the issue/complaint (if not in manifest.txt)
 
+**When asking for issue type, use high-level, user-friendly options:**
+1. "Tunnel not connected / connection down" - Submariner tunnels are in error state or not connecting
+2. "Connectivity issues / cannot reach pods" - Cross-cluster pod/service connectivity failing
+3. "Suspect firewall or other infrastructure issue" - Possible network/firewall blocking traffic
+4. "Pods failing / crashing" - Submariner components not running properly
+5. "Service discovery not working" - DNS or cross-cluster service issues
+6. "General health check / not sure" - Comprehensive analysis of all components
+
+Note: Avoid technical jargon like "ESP blocking" or "MTU issues" in user-facing options.
+
 ### Phase 2: Extract and Validate Diagnostic Data
 
 **If tarball provided:**
@@ -67,13 +77,13 @@ Based on the complaint, route to appropriate analysis:
 3. **"connectivity issues"** / **"cannot reach pods"** / **"ping fails"**
    → Focus: Datapath and MTU analysis (like troubleshoot-mtu-check.md)
 
-4. **"ESP blocking"** / **"firewall"** / **"protocol 50"**
-   → Focus: ESP analysis (like troubleshoot-esp-check.md)
+4. **"suspect firewall or other infrastructure issue"** / **"ESP blocking"** / **"firewall"** / **"protocol 50"**
+   → Focus: ESP analysis and infrastructure checks (like troubleshoot-esp-check.md)
 
-5. **"service discovery"** / **"DNS not working"**
+5. **"service discovery"** / **"service discovery not working"** / **"DNS not working"**
    → Focus: Service discovery analysis
 
-6. **Generic / No specific complaint**
+6. **"general health check"** / **"not sure"** / **Generic / No specific complaint**
    → Perform comprehensive health check (like troubleshoot-health.md)
 
 ### Phase 4: Read Diagnostic Files
@@ -96,9 +106,14 @@ Based on the complaint, route to appropriate analysis:
 2. `cluster1/gather/cluster*/*-submariner-*.log` - Pod logs
 
 #### D. For Connectivity/MTU Issues:
-1. `verify/connectivity.txt` - Default packet size results
-2. `verify/connectivity-small-packet.txt` - Small packet size results
+1. `verify/connectivity.txt` - Default packet size results (check command header for test parameters)
+2. `verify/connectivity-small-packet.txt` - Small packet size results (check command header for test parameters)
 3. Gateway logs (same as tunnel issues)
+
+Note: The verify files contain the actual command executed at the top. Check if:
+- The same context was used for both --context and --tocontext (common mistake)
+- Correct packet sizes were specified
+- Proper kubeconfig was used
 
 #### E. For RouteAgent Issues:
 1. `cluster1/routeagents.yaml` - RouteAgent status
@@ -222,6 +237,30 @@ verify/service-discovery.txt
 
 ### Phase 6: Provide Analysis Report
 
+**IMPORTANT: Reference Official Documentation**
+
+When providing solutions in the report, ALWAYS reference the official Submariner documentation rather than just providing kubectl commands:
+
+- Point to specific documentation pages on https://submariner.io/
+- Reference the exact section that addresses the issue
+- Provide the documentation URL prominently in the solution
+- Keep commands minimal - let the official docs provide the details
+- This ensures users get the most up-to-date information and proper context
+
+**Common Documentation References (with search terms):**
+- ESP/Firewall issues: https://submariner.io/operations/nat-traversal/
+  → Search: "ESP" or "protocol 50"
+- Public IP configuration: https://submariner.io/operations/nat-traversal/
+  → Section: "Setting fixed public IPv4 address for a gateway"
+  → Search: "gateway.submariner.io/public-ip"
+- UDP encapsulation: https://submariner.io/operations/nat-traversal/
+  → Section: "Forcing UDP encapsulation"
+  → Search: "ceIPSecForceUDPEncaps"
+- MTU issues: https://submariner.io/operations/mtu/
+  → Search: "MSS clamping" or "cable-mtu"
+- Deployment guide: https://submariner.io/operations/deployment/
+- Troubleshooting: https://submariner.io/operations/troubleshooting/
+
 Create a comprehensive report following this format:
 
 ```
@@ -293,27 +332,45 @@ Why this is happening:
 RECOMMENDED SOLUTION
 ========================================
 
-<Step-by-step fix instructions>
+<Provide solution with reference to official documentation>
 
-For example, if ESP blocking:
+**IMPORTANT:** Always reference official Submariner documentation and point to specific sections.
+
+When referencing documentation:
+- Provide the full URL
+- Specify the exact section heading to look for
+- Provide a search string that users can use to quickly find the relevant content (Ctrl+F / Cmd+F)
+- Give a brief summary of what they'll find there
+
+**For example, if ESP blocking:**
 
 SOLUTION: Apply UDP Encapsulation
 
-1. On both clusters, patch the Submariner CR to force UDP encapsulation:
+Please refer to the official Submariner documentation for detailed instructions:
 
-   kubectl patch submariner -n submariner-operator submariner \
-     --type merge \
-     -p '{"spec": {"ceIPSecForceUDPEncaps": true}}'
+📖 **Documentation:** https://submariner.io/operations/nat-traversal/
+   **Section to find:** "Forcing UDP encapsulation"
+   **Search for:** "ceIPSecForceUDPEncaps" or "Forcing UDP encapsulation"
 
-2. Restart gateway pods on both clusters:
+Summary:
+- The ESP protocol (protocol 50) is being blocked by your firewall/infrastructure
+- Submariner can work around this by forcing UDP encapsulation
+- The documentation shows how to patch the Submariner CR and restart gateway pods
 
-   kubectl delete pods -n submariner-operator -l app=submariner-gateway
+**For example, if Public IP resolution failure:**
 
-3. Verify tunnel comes up:
+SOLUTION: Set Fixed Public IP Address
 
-   subctl show connections
+Please refer to the official Submariner documentation for detailed instructions:
 
-Expected outcome: Tunnel status should change to "connected"
+📖 **Documentation:** https://submariner.io/operations/nat-traversal/
+   **Section to find:** "Setting fixed public IPv4 address for a gateway"
+   **Search for:** "gateway.submariner.io/public-ip" or "fixed public IPv4"
+
+Summary:
+- The gateway cannot auto-detect its public IP (no internet access or air-gapped)
+- The documentation shows how to annotate the gateway node with a fixed public IP
+- After setting the annotation, restart the gateway pod to apply changes
 
 ========================================
 ADDITIONAL RECOMMENDATIONS
