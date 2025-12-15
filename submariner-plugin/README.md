@@ -148,6 +148,35 @@ Diagnose MTU/fragmentation issues by testing connectivity with different packet 
 - Tests with small packet size (300 bytes)
 - Recommends TCP MSS clamping if MTU issue detected
 
+### Offline Diagnostics
+
+### `/analyze-offline`
+Analyze Submariner diagnostics offline from previously collected data. Use this when you have diagnostic tarballs or directories from clusters but no live cluster access.
+
+**Usage:**
+```
+/analyze-offline <diagnostics-path> [complaint]
+```
+
+**What it does:**
+- Extracts and validates diagnostic data (tarball or directory)
+- Performs root cause analysis based on user complaint
+- Applies same troubleshooting logic as live commands
+- Provides detailed analysis report with recommended solutions
+
+**Diagnoses:**
+- Tunnel connectivity issues (ESP blocking, port blocking)
+- MTU/fragmentation problems
+- RouteAgent health issues
+- Pod health problems
+- Service discovery issues
+
+**Input format:**
+- Tarball: `submariner-diagnostics-*.tar.gz`
+- Directory: Extracted diagnostic data with cluster folders
+
+### ACM Integration
+
 ### `/acm-hub-health`
 Check Submariner health on ACM (Advanced Cluster Management) hub cluster by analyzing ManagedClusterAddOn and SubmarinerConfig resources.
 
