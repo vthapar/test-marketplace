@@ -201,27 +201,68 @@ if [ -n "$KUBECONFIG2" ] && [ -n "$CONTEXT1" ] && [ -n "$CONTEXT2" ]; then
     echo "=== Running connectivity verification ==="
     mkdir -p "${OUTPUT_DIR}/verify"
 
+    # Detect which image registry is accessible by actually trying to create pods on BOTH clusters
+    echo "Detecting accessible image registry for nettest..."
+    IMAGE_OVERRIDE=""
+    RH_REGISTRY_OK=true
+
+    # Test default Red Hat registry on cluster1
+    echo "Testing registry.redhat.io/rhacm2/nettest:0.21.0 on cluster1..."
+    kubectl run nettest-registry-check --image=registry.redhat.io/rhacm2/nettest:0.21.0 --restart=Never --kubeconfig="${KUBECONFIG1}" --context="${CONTEXT1}" --command -- sleep 1 >/dev/null 2>&1
+    sleep 3
+    POD_STATUS=$(kubectl get pod nettest-registry-check --kubeconfig="${KUBECONFIG1}" --context="${CONTEXT1}" -o jsonpath='{.status.containerStatuses[0].state}' 2>/dev/null)
+
+    if echo "$POD_STATUS" | grep -qE "running|terminated|waiting.*PodInitializing|waiting.*ContainerCreating"; then
+        echo "  ✓ Cluster1: registry.redhat.io is accessible"
+    else
+        echo "  ✗ Cluster1: registry.redhat.io not accessible (ImagePullBackOff)"
+        RH_REGISTRY_OK=false
+    fi
+    kubectl delete pod nettest-registry-check --kubeconfig="${KUBECONFIG1}" --context="${CONTEXT1}" --wait=false >/dev/null 2>&1
+
+    # Test default Red Hat registry on cluster2
+    echo "Testing registry.redhat.io/rhacm2/nettest:0.21.0 on cluster2..."
+    kubectl run nettest-registry-check --image=registry.redhat.io/rhacm2/nettest:0.21.0 --restart=Never --kubeconfig="${KUBECONFIG2}" --context="${CONTEXT2}" --command -- sleep 1 >/dev/null 2>&1
+    sleep 3
+    POD_STATUS=$(kubectl get pod nettest-registry-check --kubeconfig="${KUBECONFIG2}" --context="${CONTEXT2}" -o jsonpath='{.status.containerStatuses[0].state}' 2>/dev/null)
+
+    if echo "$POD_STATUS" | grep -qE "running|terminated|waiting.*PodInitializing|waiting.*ContainerCreating"; then
+        echo "  ✓ Cluster2: registry.redhat.io is accessible"
+    else
+        echo "  ✗ Cluster2: registry.redhat.io not accessible (ImagePullBackOff)"
+        RH_REGISTRY_OK=false
+    fi
+    kubectl delete pod nettest-registry-check --kubeconfig="${KUBECONFIG2}" --context="${CONTEXT2}" --wait=false >/dev/null 2>&1
+
+    # If both clusters can access Red Hat registry, use default image
+    if [ "$RH_REGISTRY_OK" = "true" ]; then
+        echo "  ✓ Both clusters can access registry.redhat.io - using default image"
+    else
+        echo "  ✗ At least one cluster cannot access registry.redhat.io - using quay.io mirror"
+        IMAGE_OVERRIDE="--image-override submariner-nettest=quay.io/submariner/nettest:devel"
+    fi
+
     # Merge kubeconfigs temporarily for subctl verify
     MERGED_KUBECONFIG="${OUTPUT_DIR}/merged-kubeconfig"
     KUBECONFIG="${KUBECONFIG1}:${KUBECONFIG2}" kubectl config view --flatten > "${MERGED_KUBECONFIG}"
 
     echo "Running subctl verify for connectivity (default packet size)..."
-    VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only connectivity --verbose"
+    VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only connectivity --verbose ${IMAGE_OVERRIDE}"
     echo "========================================" > "${OUTPUT_DIR}/verify/connectivity.txt"
     echo "Command executed:" >> "${OUTPUT_DIR}/verify/connectivity.txt"
     echo "${VERIFY_CMD}" >> "${OUTPUT_DIR}/verify/connectivity.txt"
     echo "========================================" >> "${OUTPUT_DIR}/verify/connectivity.txt"
     echo "" >> "${OUTPUT_DIR}/verify/connectivity.txt"
-    KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only connectivity --verbose >> "${OUTPUT_DIR}/verify/connectivity.txt" 2>&1 || echo "Connectivity verification failed or timed out" >> "${OUTPUT_DIR}/verify/connectivity.txt"
+    KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only connectivity --verbose ${IMAGE_OVERRIDE} >> "${OUTPUT_DIR}/verify/connectivity.txt" 2>&1 || echo "Connectivity verification failed or timed out" >> "${OUTPUT_DIR}/verify/connectivity.txt"
 
     echo "Running subctl verify for connectivity (small packet size for MTU testing)..."
-    VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only connectivity --verbose --packet-size 400"
+    VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only connectivity --verbose --packet-size 400 ${IMAGE_OVERRIDE}"
     echo "========================================" > "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
     echo "Command executed:" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
     echo "${VERIFY_CMD}" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
     echo "========================================" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
     echo "" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
-    KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only connectivity --verbose --packet-size 400 >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt" 2>&1 || echo "Connectivity verification with small packets failed or timed out" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
+    KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only connectivity --verbose --packet-size 400 ${IMAGE_OVERRIDE} >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt" 2>&1 || echo "Connectivity verification with small packets failed or timed out" >> "${OUTPUT_DIR}/verify/connectivity-small-packet.txt"
 
     # Check if service discovery is enabled before running the test
     echo "Checking if service discovery is enabled..."
@@ -230,13 +271,13 @@ if [ -n "$KUBECONFIG2" ] && [ -n "$CONTEXT1" ] && [ -n "$CONTEXT2" ]; then
 
     if [ "$SD_ENABLED_CLUSTER1" = "true" ] || [ "$SD_ENABLED_CLUSTER2" = "true" ]; then
         echo "Running subctl verify for service-discovery..."
-        VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only service-discovery --verbose"
+        VERIFY_CMD="KUBECONFIG=${MERGED_KUBECONFIG} subctl verify --context ${CONTEXT1} --tocontext ${CONTEXT2} --only service-discovery --verbose ${IMAGE_OVERRIDE}"
         echo "========================================" > "${OUTPUT_DIR}/verify/service-discovery.txt"
         echo "Command executed:" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
         echo "${VERIFY_CMD}" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
         echo "========================================" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
         echo "" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
-        KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only service-discovery --verbose >> "${OUTPUT_DIR}/verify/service-discovery.txt" 2>&1 || echo "Service discovery verification failed or timed out" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
+        KUBECONFIG="${MERGED_KUBECONFIG}" subctl verify --context "${CONTEXT1}" --tocontext "${CONTEXT2}" --only service-discovery --verbose ${IMAGE_OVERRIDE} >> "${OUTPUT_DIR}/verify/service-discovery.txt" 2>&1 || echo "Service discovery verification failed or timed out" >> "${OUTPUT_DIR}/verify/service-discovery.txt"
     else
         echo "Skipping service-discovery verification (not enabled on either cluster)"
         echo "========================================" > "${OUTPUT_DIR}/verify/service-discovery.txt"
