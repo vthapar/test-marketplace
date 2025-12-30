@@ -16,10 +16,16 @@ test-marketplace/
     ├── QUICKSTART.md                  # Quick start guide
     └── commands/                      # Plugin slash commands
         ├── deploy-broker.md           # Deploy Submariner broker
-        ├── deploy.md                  # Join cluster to broker
-        ├── diagnose.md                # Run comprehensive diagnostics
-        ├── status.md                  # Show Submariner status
-        └── uninstall.md               # Uninstall Submariner
+        ├── join.md                    # Join cluster to broker
+        ├── show-status.md             # Show Submariner connection status
+        ├── uninstall.md               # Uninstall Submariner
+        ├── acm-hub-health.md          # Check Submariner health on ACM hub
+        ├── analyze-offline.md         # Analyze diagnostics offline
+        ├── troubleshoot-health.md     # Comprehensive health check
+        ├── troubleshoot-tunnel.md     # Troubleshoot tunnel connectivity
+        ├── troubleshoot-esp-check.md  # Test and fix ESP firewall blocking
+        ├── troubleshoot-mtu-check.md  # Diagnose MTU/fragmentation issues
+        └── troubleshoot-datapath-check.md  # Verify end-to-end datapath
 ```
 
 ## Installing the Submariner Plugin Locally
@@ -78,11 +84,53 @@ In Claude Code, you can also check available commands:
 ```
 
 This should show autocomplete suggestions for all Submariner commands:
-- `/submariner:deploy-broker`
-- `/submariner:deploy`
-- `/submariner:diagnose`
-- `/submariner:status`
-- `/submariner:uninstall`
+
+**Deployment & Setup:**
+- `/submariner:deploy-broker` - Deploy Submariner broker to the cluster
+- `/submariner:join` - Join cluster to Submariner broker
+- `/submariner:uninstall` - Uninstall Submariner components
+
+**Status & Monitoring:**
+- `/submariner:show-status` - Show Submariner connection status
+- `/submariner:acm-hub-health` - Check Submariner health on ACM hub cluster
+
+**Troubleshooting:**
+- `/submariner:troubleshoot-health` - Comprehensive health check and troubleshooting
+- `/submariner:troubleshoot-tunnel` - Troubleshoot why tunnels are not connected
+- `/submariner:troubleshoot-esp-check` - Test and fix ESP protocol firewall blocking
+- `/submariner:troubleshoot-mtu-check` - Diagnose MTU/fragmentation issues
+- `/submariner:troubleshoot-datapath-check` - Verify end-to-end datapath connectivity
+
+**Diagnostics:**
+- `/submariner:analyze-offline` - Analyze Submariner diagnostics offline from collected data
+
+## Command Usage Guide
+
+### When to Use Each Command
+
+**Getting Started:**
+1. First, deploy a broker: `/submariner:deploy-broker`
+2. Then, join your clusters: `/submariner:join`
+3. Verify the connection: `/submariner:show-status`
+
+**Monitoring & Health Checks:**
+- Use `/submariner:show-status` for quick connection status
+- Use `/submariner:acm-hub-health` if using ACM (Advanced Cluster Management)
+- Use `/submariner:troubleshoot-health` for comprehensive health analysis
+
+**When Things Go Wrong:**
+- Start with `/submariner:troubleshoot-health` for overall diagnosis
+- If tunnel is not connected: `/submariner:troubleshoot-tunnel`
+- If you suspect firewall issues: `/submariner:troubleshoot-esp-check`
+- If connectivity works but is slow/unstable: `/submariner:troubleshoot-mtu-check`
+- To verify full datapath: `/submariner:troubleshoot-datapath-check`
+
+**Offline Analysis:**
+- Use `/submariner:analyze-offline` to analyze diagnostic data without cluster access
+- Useful for support cases, post-mortems, or when cluster access is limited
+
+**Cleanup:**
+- Use `/submariner:uninstall` to remove Submariner from your cluster
 
 ## Updating the Plugin
 
