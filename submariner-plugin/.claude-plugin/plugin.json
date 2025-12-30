@@ -4,5 +4,12 @@
   "description": "Submariner cli heplers",
   "author": {
     "name": "Submariner Team"
-  }
+  },
+  "commands": [
+    "./commands/deploy.md",  
+    "./commands/deploy-broker.md",
+    "./commands/status.md",
+    "./commands/uninstall.md",
+    "./commands/diagnose.md"
+  ]
 }
